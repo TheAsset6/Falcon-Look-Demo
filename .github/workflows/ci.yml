@@ -4,38 +4,38 @@ on: pull_request
 
 jobs: 
   build:
-  runs-on: ubuntu-latest
-  steps:
-  - uses: action/checkout@v3
+    runs-on: ubuntu-latest
+    steps:
+    - uses: action/checkout@v3
 
-  - uses: actions/setup-python@v4
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        cache: 'pip' # caching pip dependencies
+
+    - run: pip install -r requirements.txt
+
+    - name: Docker Build and run
+      run: |
+        docker build . -t theasset6/falcon-look-app
+        docker run -dit -p 8000:8000 theasset6/falcon-look-app
+
+    - name: Test Code
+      run: coverage run -m pytest tests/
+
+    - name: Generate the report
+      if: ${{ always() }}
+      run: coverage report > coverage-report
+
+    - name: Scan image
+    uses: anchore/scan-action@v3
+    id: scan
     with:
-      python-version: '3.9'
-      cache: 'pip' # caching pip dependencies
-  
-  - run: pip install -r requirements.txt
+      image: "theasset6/falcon-look-app"
 
-  - name: Docker Build and run
-    run: |
-      docker build . -t theasset6/falcon-look-app
-      docker run -dit -p 8000:8000 theasset6/falcon-look-app
-
-  - name: Test Code
-    run: coverage run -m pytest tests/
-
-  - name: Generate the report
-    if: ${{ always() }}
-    run: coverage report > coverage-report
-
-  - name: Scan image
-  uses: anchore/scan-action@v3
-  id: scan
-  with:
-    image: "theasset6/falcon-look-app"
-
-  - name: upload Anchore scan SARIF report
-    uses: github/codeql-action/upload-sarif@v2
-    with:
-      sarif_file: ${{ steps.scan.outputs.sarif }}
+    - name: upload Anchore scan SARIF report
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: ${{ steps.scan.outputs.sarif }}
       
 
